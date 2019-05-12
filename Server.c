@@ -2,6 +2,7 @@
 //
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/socket.h>
 #include <netdb.h>
 
@@ -12,7 +13,7 @@ int currentSocket = 0;
 int port = 0;
 struct sockaddr_in server;
 
-void main(int argc, char argv[])
+void main(int argc, char *argv[])
 {
 	//Checks that the parameters are correct, otherwise prints the help and exits
 	if (argc <= 1)
@@ -35,15 +36,15 @@ void main(int argc, char argv[])
 	else
 	{
 		//Socket created successfully, prints diagnostic message
-		printf("Socket created successfully.\n")
+		printf("Socket created successfully.\n");
 	}
 	
 	//Initializes the socket with protocol, port, INADDR_ANY to use all local addresses
 	server.sin_family = AF_INET;
 	server.sin_port = htons(port);
 	server.sin_addr.s_addr = htonl(INADDR_ANY);
-	int bindStatus = bind(socket, (struct sockaddr *)&server,sizeof(server))
-	if (bindStatus == 0)
+	int status = bind(currentSocket, (struct sockaddr *)&server,sizeof(server));
+	if (status == 0)
 	{
 		printf("Socket ready.\n");
 	}
@@ -51,6 +52,15 @@ void main(int argc, char argv[])
 	{
 		fprintf(stderr, "Socket not ready. Cannot bind to address.\n");
 		return;
+	}
+
+	//Now that the socket is ready, keeps waiting for an incoming connection
+	while(1)
+	{
+		struct sockaddr_in client = { 0 };
+		int sizeClient = sizeof(client);
+        int sckt = accept(currentSocket,(struct sockaddr *)&client, &sizeClient);
+
 	}
 }
 
