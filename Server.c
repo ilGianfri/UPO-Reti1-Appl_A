@@ -1,24 +1,33 @@
 // LabReti1_1819_Appl_A.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/socket.h>
+#include <stdio.h>      
+#include <sys/types.h>
+#include <sys/socket.h>   
 #include <netdb.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h> 
 
-const char HELP[] = "Missing parameter\n\nSYNTAX: $server <port number>\n";
+const char WRONGARGS[] = "Missing parameter\n\nSYNTAX: $server <port number>\n";
 const int MAX_LENGTH = 512;
+char WELCOMEMSG[] = "Welcome, connection enstablished successfully.";
+char OKRES[] = "OK";
+char ERRORMSG[] = "ERR";
 
 int currentSocket = 0;
 int port = 0;
 struct sockaddr_in server;
+char buffer[512] = "";
+
+char* responseBuilder(char result[], char type[], char content[]);
 
 void main(int argc, char *argv[])
 {
 	//Checks that the parameters are correct, otherwise prints the help and exits
 	if (argc <= 1)
 	{
-		fprintf(stderr, HELP);
+		fprintf(stderr, WRONGARGS);
 		return;
 	}
 
@@ -43,10 +52,10 @@ void main(int argc, char *argv[])
 	server.sin_family = AF_INET;
 	server.sin_port = htons(port);
 	server.sin_addr.s_addr = htonl(INADDR_ANY);
-	int status = bind(currentSocket, (struct sockaddr *)&server,sizeof(server));
+	int status = bind(currentSocket, (struct sockaddr *)&server, sizeof(server));
 	if (status == 0)
 	{
-		printf("Socket ready.\n");
+		printf("Socket ready. Waiting for connection...\n");
 	}
 	else
 	{
@@ -54,32 +63,48 @@ void main(int argc, char *argv[])
 		return;
 	}
 
+	//Listens for incoming connections, maximum 5 queued
+	status = listen(currentSocket, 5);
+
 	//Now that the socket is ready, keeps waiting for an incoming connection
 	while(1)
 	{
 		struct sockaddr_in client = { 0 };
 		int sizeClient = sizeof(client);
-        int sckt = accept(currentSocket,(struct sockaddr *)&client, &sizeClient);
+        int incomingSocket = accept(currentSocket,(struct sockaddr *)&client, &sizeClient);
+		if (incomingSocket == -1)
+		{
+			fprintf(stderr, "Cannot accept incoming connection(s).\n");
+			close(currentSocket);
+			return;
+		}
 
+		printf("Sending message to client.\n");
+		write(incomingSocket, responseBuilder(OKRES, "START", WELCOMEMSG), MAX_LENGTH);
+
+		//Waits for a message from the client
+		status = read(incomingSocket, buffer, sizeof(buffer));
+		if (status > 0)
+		{
+			
+		}
+		else
+		{
+			fprintf(stderr, "There was an error getting the message from the client. Connection will be terminated.\n");
+			close(currentSocket);
+			return;
+		}
+		
 	}
+	
 }
 
-/*
+// This method builds the response messages to ensure they respect the protocol
+char* responseBuilder(char result[], char type[], char content[])
+{
+    char toreturn[MAX_LENGTH];
+    sprintf(toreturn, "%s %s %s\n", result, type, content);
+    char *ptr = toreturn;
 
-*/
-//char** responseBuilder(char result[], char type[], char content[])
-//{
-//	return result + " " +
-//}
-
-
-// Run program: Ctrl + F5 or Debug > Start Without Debugging menu
-// Debug program: F5 or Debug > Start Debugging menu
-
-// Tips for Getting Started: 
-//   1. Use the Solution Explorer window to add/manage files
-//   2. Use the Team Explorer window to connect to source control
-//   3. Use the Output window to see build output and other messages
-//   4. Use the Error List window to view errors
-//   5. Go to Project > Add New Item to create new code files, or Project > Add Existing Item to add existing code files to the project
-//   6. In the future, to open this project again, go to File > Open > Project and select the .sln file
+    return ptr;
+}
