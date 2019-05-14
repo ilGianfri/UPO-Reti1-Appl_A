@@ -17,6 +17,7 @@ const int MAX_LENGTH = 512;
 const char ALLOWEDCMDS[4][4] = { "TEXT", "HIST", "EXIT", "QUIT"};
 
 char WELCOMEMSG[] = "Welcome, connection enstablished successfully.";
+char GOODBYEMSG[] = "It was fun while it lasted, goodbye!";
 char OKRES[] = "OK";
 char ERRORMSG[] = "ERR";
 
@@ -100,6 +101,12 @@ void main(int argc, char *argv[])
 				{
 					case 'T':
 
+					break;
+					
+					case 'Q':
+					printf("Sending closing message to client.\n");
+					write(incomingSocket, responseBuilder(OKRES, "QUIT", GOODBYEMSG), MAX_LENGTH);
+					close(incomingSocket);
 					break;
 				}
 			}
