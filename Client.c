@@ -88,11 +88,23 @@ void main(int argc, char *argv[])
     }
 }
 
+// This method builds the response messages to ensure they respect the protocol
+char* responseBuilder(char result[], char type[], char content[])
+{
+    char toreturn[MAX_LENGTH];
+    sprintf(toreturn, "%s %s %s\n", result, type, content);
+    char *ptr = toreturn;
+
+    return ptr;
+}
+
+// Clears the buffer
 void clearBuffer()
 {
     memset(buffer, 0, sizeof(buffer));
 }
 
+// Removes all the protocol text leaving only the message
 char* removeProtocolText(char b[])
 {
     int spacecount = 0;

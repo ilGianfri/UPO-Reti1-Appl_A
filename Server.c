@@ -9,8 +9,13 @@
 #include <string.h>
 #include <unistd.h> 
 
+#define true 1
+#define false 0
+
 const char WRONGARGS[] = "Missing parameter\n\nSYNTAX: $server <port number>\n";
 const int MAX_LENGTH = 512;
+const char ALLOWEDCMDS[4][4] = { "TEXT", "HIST", "EXIT", "QUIT"};
+
 char WELCOMEMSG[] = "Welcome, connection enstablished successfully.";
 char OKRES[] = "OK";
 char ERRORMSG[] = "ERR";
@@ -21,6 +26,8 @@ struct sockaddr_in server;
 char buffer[512] = "";
 
 char* responseBuilder(char result[], char type[], char content[]);
+char* getCommand(char fulls[]);
+int isAllowedCommand(char cmd[]);
 
 void main(int argc, char *argv[])
 {
@@ -86,7 +93,17 @@ void main(int argc, char *argv[])
 		status = read(incomingSocket, buffer, sizeof(buffer));
 		if (status > 0)
 		{
-			
+			char *cmd = getCommand(buffer);
+			if (isAllowedCommand(cmd))
+			{
+				switch(cmd[0])
+				{
+					case 'T':
+
+					break;
+				}
+			}
+			else write(incomingSocket, responseBuilder(ERRORMSG, "SYNTAX", "Command is not valid."), MAX_LENGTH);
 		}
 		else
 		{
@@ -99,6 +116,16 @@ void main(int argc, char *argv[])
 	
 }
 
+// Spero copy le prime 4 lettere in cmd
+char* getCommand(char fulls[])
+{
+	char cmd[4];
+	memcpy(cmd, &fulls[0], 4);
+	char *ptr = cmd;
+
+	return ptr;
+}
+
 // This method builds the response messages to ensure they respect the protocol
 char* responseBuilder(char result[], char type[], char content[])
 {
@@ -107,4 +134,15 @@ char* responseBuilder(char result[], char type[], char content[])
     char *ptr = toreturn;
 
     return ptr;
+}
+
+// Checks if the given text is one of the allowed commands
+int isAllowedCommand(char cmd[])
+{
+	for (int i = 0; i < 4; i++)
+	{
+		if (strcmp(cmd, ALLOWEDCMDS[i]) == 0)
+			return true;
+	}
+	return false;
 }
