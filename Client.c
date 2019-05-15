@@ -15,6 +15,8 @@ int currentSocket = 0, port = 0;
 struct sockaddr_in scktAddr;
 char buffer[512] = "";
 char PROTOCOLFORMAT[] = "%s %s %s\n";
+char OKRES[] = "OK";
+char ERRORMSG[] = "ERR";
 
 void clearBuffer();
 char* removeProtocolText(char b[]);
@@ -71,16 +73,28 @@ void main(int argc, char *argv[])
         {
             printf("%s", removeProtocolText(buffer));
             clearBuffer();
-            printf(HELP);
 
-            char choice = 0;
-            scanf(" %c", &choice);
-            switch(choice)
+            //TODO: CHECK IF IT's OK
+            char* res = getResponseResult(buffer);
+            if (memcmp(res, OKRES, sizeof(res)) == 0)
             {
-                case 'd': case 'D':
-                write(currentSocket,"QUIT\n", 6);
-                break;
+                //TODO: CHECK SECOND PART OF THE METHOD
+                printf(HELP);
+
+                char choice = 0;
+                scanf(" %c", &choice);
+                switch(choice)
+                {
+                    case 'd': case 'D':
+                    write(currentSocket,"QUIT\n", 6);
+                    break;
+                }
             }
+            else
+            {
+                //TODO: CLOSE CONNECTION AND CLOSE
+            }
+            
         }
         else
         {
@@ -98,6 +112,29 @@ char* responseBuilder(char command[], char type[], char content[])
     char *ptr = toreturn;
 
     return ptr;
+}
+
+
+
+// Gets the result from the server response
+char* getResponseResult(char fulls[])
+{
+    int spacecount = 0;
+    int pointer = 0;
+
+     while (spacecount < 1)
+    {
+        if (fulls[pointer] == ' ')
+            spacecount++;
+
+        pointer++;
+    }
+
+	char cmd[pointer + 1];
+	memcpy(cmd, &fulls[0], pointer);
+	char *ptr = cmd;
+
+	return ptr;
 }
 
 // Clears the buffer

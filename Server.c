@@ -14,7 +14,7 @@
 
 const char WRONGARGS[] = "Missing parameter\n\nSYNTAX: $server <port number>\n";
 const int MAX_LENGTH = 512;
-const char ALLOWEDCMDS[4][4] = { "TEXT", "HIST", "EXIT", "QUIT\n"};
+const char ALLOWEDCMDS[4][4] = { "TEXT", "HIST", "EXIT", "QUIT"};
 
 char WELCOMEMSG[] = "Welcome, connection enstablished successfully.";
 char GOODBYEMSG[] = "It was fun while it lasted, goodbye!";
@@ -95,12 +95,11 @@ void main(int argc, char *argv[])
 		{
 			//Waits for a message from the client
 			scktstatus = read(incomingSocket, buffer, sizeof(buffer));
-			printf("buffer: %s", buffer);
 			if (scktstatus > 0)
 			{
 				char *cmd = getCommand(buffer);
 				if (isAllowedCommand(cmd) == 1)
-				// if(1)
+				//if(1)
 				{
 					switch(cmd[0])
 					{
@@ -165,7 +164,7 @@ int isAllowedCommand(char cmd[])
 {
 	for (int i = 0; i < 4; i++)
 	{
-		if (strcmp(cmd, ALLOWEDCMDS[i]) == 0)
+		if (memcmp(cmd, ALLOWEDCMDS[i], 4) == 0)
 			return true;
 	}
 	return false;
