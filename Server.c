@@ -14,21 +14,22 @@
 
 const char WRONGARGS[] = "Missing parameter\n\nSYNTAX: $server <port number>\n";
 const int MAX_LENGTH = 512;
-const char ALLOWEDCMDS[4][4] = { "TEXT", "HIST", "EXIT", "QUIT"};
+const char ALLOWEDCMDS[4][4] = { "TEXT", "HIST", "EXIT", "QUIT\n"};
 
 char WELCOMEMSG[] = "Welcome, connection enstablished successfully.";
 char GOODBYEMSG[] = "It was fun while it lasted, goodbye!";
+char PROTOCOLFORMAT[] = "%s %s %s\n";
 char OKRES[] = "OK";
 char ERRORMSG[] = "ERR";
 
-int currentSocket = 0;
-int port = 0;
+int currentSocket = 0, port = 0;
 struct sockaddr_in server;
 char buffer[512] = "";
 
 char* responseBuilder(char result[], char type[], char content[]);
 char* getCommand(char fulls[]);
 int isAllowedCommand(char cmd[]);
+int responseLength(char result[], char type[], char content[]);
 
 void main(int argc, char *argv[])
 {
@@ -60,22 +61,21 @@ void main(int argc, char *argv[])
 	server.sin_family = AF_INET;
 	server.sin_port = htons(port);
 	server.sin_addr.s_addr = htonl(INADDR_ANY);
-	int status = bind(currentSocket, (struct sockaddr *)&server, sizeof(server));
-	if (status == 0)
-	{
+	int scktstatus = bind(currentSocket, (struct sockaddr *)&server, sizeof(server));
+	if (scktstatus == 0)
 		printf("Socket ready. Waiting for connection...\n");
-	}
 	else
 	{
 		fprintf(stderr, "Socket not ready. Cannot bind to address.\n");
 		return;
 	}
-
+	
 	//Listens for incoming connections, maximum 5 queued
-	status = listen(currentSocket, 5);
+	scktstatus = listen(currentSocket, 5);
 
+	int incomingSocket = 0;
 	//Now that the socket is ready, keeps waiting for an incoming connection
-	while(1)
+	while(incomingSocket >= 0)
 	{
 		struct sockaddr_in client = { 0 };
 		int sizeClient = sizeof(client);
@@ -87,40 +87,50 @@ void main(int argc, char *argv[])
 			return;
 		}
 
-		printf("Sending message to client.\n");
+		printf("Sending START message to the client.\n");
 		write(incomingSocket, responseBuilder(OKRES, "START", WELCOMEMSG), MAX_LENGTH);
 
-		//Waits for a message from the client
-		status = read(incomingSocket, buffer, sizeof(buffer));
-		if (status > 0)
+		//Keeps listening on the current socket
+		while(scktstatus != -1)
 		{
-			char *cmd = getCommand(buffer);
-			if (isAllowedCommand(cmd))
+			//Waits for a message from the client
+			scktstatus = read(incomingSocket, buffer, sizeof(buffer));
+			printf("buffer: %s", buffer);
+			if (scktstatus > 0)
 			{
-				switch(cmd[0])
+				char *cmd = getCommand(buffer);
+				if (isAllowedCommand(cmd) == 1)
+				// if(1)
 				{
-					case 'T':
+					switch(cmd[0])
+					{
+						case 'T':
 
-					break;
+						break;
 					
-					case 'Q':
-					printf("Sending closing message to client.\n");
-					write(incomingSocket, responseBuilder(OKRES, "QUIT", GOODBYEMSG), MAX_LENGTH);
+						case 'Q':
+						printf("Sending closing message to client.\n");
+						write(incomingSocket, responseBuilder(OKRES, "QUIT", GOODBYEMSG), responseLength(OKRES, "QUIT", GOODBYEMSG));
+						close(incomingSocket);
+						scktstatus = -1;
+						break;
+					}
+				}
+				else 
+				{
+					printf("Received an invalid command. Closing socket");
+					write(incomingSocket, responseBuilder(ERRORMSG, "SYNTAX", "Command is not valid."), responseLength(ERRORMSG, "SYNTAX", "Command is not valid."));
 					close(incomingSocket);
-					break;
 				}
 			}
-			else write(incomingSocket, responseBuilder(ERRORMSG, "SYNTAX", "Command is not valid."), MAX_LENGTH);
-		}
-		else
-		{
-			fprintf(stderr, "There was an error getting the message from the client. Connection will be terminated.\n");
-			close(currentSocket);
-			return;
-		}
-		
+			else
+			{
+				fprintf(stderr, "There was an error getting the message from the client. Connection will be terminated.\n");
+				close(currentSocket);
+				return;
+			}
+		}	
 	}
-	
 }
 
 // Spero copy le prime 4 lettere in cmd
@@ -133,11 +143,18 @@ char* getCommand(char fulls[])
 	return ptr;
 }
 
+int responseLength(char result[], char type[], char content[])
+{
+	char toreturn[MAX_LENGTH];
+    sprintf(toreturn, PROTOCOLFORMAT, result, type, content);
+	return strlen(toreturn);
+}
+
 // This method builds the response messages to ensure they respect the protocol
 char* responseBuilder(char result[], char type[], char content[])
 {
     char toreturn[MAX_LENGTH];
-    sprintf(toreturn, "%s %s %s\n", result, type, content);
+    sprintf(toreturn, PROTOCOLFORMAT, result, type, content);
     char *ptr = toreturn;
 
     return ptr;

@@ -11,10 +11,10 @@ const char WRONGARGS[] = "Missing parameter\n\nSYNTAX: $%s <server address> <por
 const char HELP[] = "\nThe available options for this client are:\na. Insert text\nb. Analyze text\nc. Exit program (with text analysis)\nd. Exit program (without text analysis)\n\nWhat would you like to do?\n";
 const int MAX_LENGTH = 512;
 
-int currentSocket = 0;
-int port = 0;
+int currentSocket = 0, port = 0;
 struct sockaddr_in scktAddr;
 char buffer[512] = "";
+char PROTOCOLFORMAT[] = "%s %s %s\n";
 
 void clearBuffer();
 char* removeProtocolText(char b[]);
@@ -54,45 +54,47 @@ void main(int argc, char *argv[])
 
     int connectionStatus = connect(currentSocket, (struct sockaddr *)&scktAddr, sizeof(scktAddr));
     if (connectionStatus == 0)
-    {
         printf("Connection to %s on port %d enstablished successfully.\n", argv[1], port);
-    }
     else
     {
         fprintf(stderr, "Could not connect to %s on port %d.\n", argv[1], port);
         close(currentSocket);
         return;
     }
-
-    //Listens on the socket for the opening message
-    connectionStatus = read(currentSocket, buffer, sizeof(buffer));
-    if (connectionStatus > 0)
+    
+    int serverResponse = 0;
+    while(1)
     {
-        printf("%s", removeProtocolText(buffer));
-        clearBuffer();
-        printf(HELP);
-
-        char choice = 0;
-        scanf("%c", &choice);
-        switch(choice)
+        //Listens on the socket for messages
+        serverResponse = read(currentSocket, buffer, sizeof(buffer));
+        if (serverResponse > 0)
         {
-            case 'a': case 'A':
-            printf("a");
-            break;
+            printf("%s", removeProtocolText(buffer));
+            clearBuffer();
+            printf(HELP);
+
+            char choice = 0;
+            scanf(" %c", &choice);
+            switch(choice)
+            {
+                case 'd': case 'D':
+                write(currentSocket,"QUIT\n", 6);
+                break;
+            }
         }
-    }
-    else
-    {
-        fprintf(stderr, "Could not read the received message Error %d.\n", connectionStatus);
-        exit(1);
+        else
+        {
+            fprintf(stderr, "Could not read the received message Error %d.\n", serverResponse);
+            exit(1);
+        }
     }
 }
 
 // This method builds the response messages to ensure they respect the protocol
-char* responseBuilder(char result[], char type[], char content[])
+char* responseBuilder(char command[], char type[], char content[])
 {
     char toreturn[MAX_LENGTH];
-    sprintf(toreturn, "%s %s %s\n", result, type, content);
+    sprintf(toreturn, PROTOCOLFORMAT, command, type, content);
     char *ptr = toreturn;
 
     return ptr;
@@ -101,7 +103,8 @@ char* responseBuilder(char result[], char type[], char content[])
 // Clears the buffer
 void clearBuffer()
 {
-    memset(buffer, 0, sizeof(buffer));
+    bzero(buffer, sizeof(buffer));
+    //memset(buffer, 0, sizeof(buffer));
 }
 
 // Removes all the protocol text leaving only the message
@@ -124,5 +127,7 @@ char* removeProtocolText(char b[])
 
     return ptr;
 }
+
+
 
 
