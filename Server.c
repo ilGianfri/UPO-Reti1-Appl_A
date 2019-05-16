@@ -1,5 +1,6 @@
-// LabReti1_1819_Appl_A.cpp : This file contains the 'main' function. Program execution begins and ends there.
-//
+/*
+Buffer si deve ridimensionare?
+*/
 
 #include <stdio.h>      
 #include <sys/types.h>
@@ -99,15 +100,19 @@ void main(int argc, char *argv[])
 			{
 				char *cmd = getCommand(buffer);
 				if (isAllowedCommand(cmd) == 1)
-				//if(1)
 				{
 					switch(cmd[0])
 					{
-						case 'T':
+						case 'T':	//TEXT
 
 						break;
-					
-						case 'Q':
+						case 'H':	//HIST
+
+						break;
+						case 'E':	//EXIT
+
+						break;
+						case 'Q':	//QUIT
 						printf("Sending closing message to client.\n");
 						write(incomingSocket, responseBuilder(OKRES, "QUIT", GOODBYEMSG), responseLength(OKRES, "QUIT", GOODBYEMSG));
 						close(incomingSocket);
@@ -118,7 +123,7 @@ void main(int argc, char *argv[])
 				else 
 				{
 					printf("Received an invalid command. Closing socket");
-					write(incomingSocket, responseBuilder(ERRORMSG, "SYNTAX", "Command is not valid."), responseLength(ERRORMSG, "SYNTAX", "Command is not valid."));
+					write(incomingSocket, responseBuilder(ERRORMSG, "SYNTAX", "Command is not valid. Connection closed."), responseLength(ERRORMSG, "SYNTAX", "Command is not valid. Connection closed."));
 					close(incomingSocket);
 				}
 			}
@@ -126,7 +131,7 @@ void main(int argc, char *argv[])
 			{
 				fprintf(stderr, "There was an error getting the message from the client. Connection will be terminated.\n");
 				close(currentSocket);
-				return;
+				scktstatus = -1;
 			}
 		}	
 	}

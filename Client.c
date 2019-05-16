@@ -20,6 +20,9 @@ char ERRORMSG[] = "ERR";
 
 void clearBuffer();
 char* removeProtocolText(char b[]);
+char* getResponseResult(char fulls[]);
+char* getResponseType(char fulls[]);
+char showSelection();
 
 void main(int argc, char *argv[])
 {
@@ -71,37 +74,66 @@ void main(int argc, char *argv[])
         serverResponse = read(currentSocket, buffer, sizeof(buffer));
         if (serverResponse > 0)
         {
-            printf("%s", removeProtocolText(buffer));
-            clearBuffer();
-
-            //TODO: CHECK IF IT's OK
-            char* res = getResponseResult(buffer);
-            if (memcmp(res, OKRES, sizeof(res)) == 0)
+            //char* res = getResponseResult(buffer);
+            
+            // Distinguish between a OK response from the server and an error
+            if (buffer[0] == 'O' && buffer[1] == 'K') //OK
             {
-                //TODO: CHECK SECOND PART OF THE METHOD
-                printf(HELP);
-
-                char choice = 0;
-                scanf(" %c", &choice);
-                switch(choice)
+                switch (buffer[3])
                 {
-                    case 'd': case 'D':
-                    write(currentSocket,"QUIT\n", 6);
+                    case 'S':   //START
+                    printf("%s", removeProtocolText(buffer));
+
+                    switch(showSelection())
+                    {
+                        case 'a': case 'A':
+                        printf("Please insert the text to analyze: ");
+                        char text[MAX_LENGTH - 5] = "";
+                        //Reads the first 507 chars (considering max of 512)
+                        fgets(text, 507, stdin);
+                        break;
+                         case 'b': case 'B':
+                        //7b
+                        break;
+                         case 'c': case 'C':
+                        //7c
+                        break;
+                        case 'd': case 'D':
+                        write(currentSocket,"QUIT\n", 6);
+                        break;
+                    }
+                    break;
+                    case 'Q': //QUIT
+                    printf("%s", removeProtocolText(buffer));
+                    close(currentSocket);
                     break;
                 }
             }
-            else
+            else    //ERROR
             {
-                //TODO: CLOSE CONNECTION AND CLOSE
-            }
-            
+                fprintf(stderr, "Received an error from the server. Connection will be closed. Error %d.\n", serverResponse);
+                close(currentSocket);
+                exit(1);
+            }      
         }
         else
         {
-            fprintf(stderr, "Could not read the received message Error %d.\n", serverResponse);
+            fprintf(stderr, "Connection has been closed.\n");
+            close(currentSocket);
             exit(1);
         }
+
+        clearBuffer();
     }
+}
+
+char showSelection()
+{
+    printf(HELP);
+    char choice = 0;
+    scanf(" %c", &choice);
+
+    return choice;
 }
 
 // This method builds the response messages to ensure they respect the protocol
@@ -113,8 +145,6 @@ char* responseBuilder(char command[], char type[], char content[])
 
     return ptr;
 }
-
-
 
 // Gets the result from the server response
 char* getResponseResult(char fulls[])
@@ -130,8 +160,8 @@ char* getResponseResult(char fulls[])
         pointer++;
     }
 
-	char cmd[pointer + 1];
-	memcpy(cmd, &fulls[0], pointer);
+	char cmd[pointer - 1];
+	memcpy(cmd, &fulls[0], pointer - 1);
 	char *ptr = cmd;
 
 	return ptr;
