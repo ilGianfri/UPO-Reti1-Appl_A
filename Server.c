@@ -76,7 +76,7 @@ void main(int argc, char *argv[])
 
 	int incomingSocket = 0;
 	//Now that the socket is ready, keeps waiting for an incoming connection
-	while(incomingSocket >= 0)
+	while(1)
 	{
 		struct sockaddr_in client = { 0 };
 		int sizeClient = sizeof(client);
@@ -87,6 +87,11 @@ void main(int argc, char *argv[])
 			close(currentSocket);
 			return;
 		}
+		else
+		{
+			printf("Waiting for a client to connect.");
+		}
+		
 
 		printf("Sending START message to the client.\n");
 		write(incomingSocket, responseBuilder(OKRES, "START", WELCOMEMSG), MAX_LENGTH);
@@ -130,7 +135,7 @@ void main(int argc, char *argv[])
 			else
 			{
 				fprintf(stderr, "There was an error getting the message from the client. Connection will be terminated.\n");
-				close(currentSocket);
+				close(incomingSocket);
 				scktstatus = -1;
 			}
 		}	

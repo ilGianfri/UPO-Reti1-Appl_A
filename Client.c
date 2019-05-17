@@ -83,14 +83,15 @@ void main(int argc, char *argv[])
                 {
                     case 'S':   //START
                     printf("%s", removeProtocolText(buffer));
-
-                    switch(showSelection())
+                    
+                    char selection = showSelection();
+                    switch(selection)
                     {
                         case 'a': case 'A':
                         printf("Please insert the text to analyze: ");
-                        char text[MAX_LENGTH - 5] = "";
+                        //char text[MAX_LENGTH - 5] = "";
                         //Reads the first 507 chars (considering max of 512)
-                        fgets(text, 507, stdin);
+                        //fgets(buffer, 507, stdin);
                         break;
                          case 'b': case 'B':
                         //7b
@@ -131,7 +132,7 @@ char showSelection()
 {
     printf(HELP);
     char choice = 0;
-    scanf(" %c", &choice);
+    scanf("%c", &choice);
 
     return choice;
 }
