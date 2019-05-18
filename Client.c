@@ -8,7 +8,7 @@
 
 
 const char WRONGARGS[] = "Missing parameter\n\nSYNTAX: $%s <server address> <port number>\n";
-const char HELP[] = "\nThe available options for this client are:\na. Insert text\nb. Analyze text\nc. Exit program (with text analysis)\nd. Exit program (without text analysis)\n\nWhat would you like to do?\n";
+const char HELP[] = "\nThe available options for this client are:\na. Insert text\nb. Analyze text\nc. Exit program (with text analysis)\nd. Exit program (without text analysis)\n\nWhat would you like to do? ";
 const int MAX_LENGTH = 512;
 
 int currentSocket = 0, port = 0;
@@ -67,52 +67,51 @@ void main(int argc, char *argv[])
         return;
     }
     
-    int serverResponse = 0;
     while(1)
     {
         //Listens on the socket for messages
-        serverResponse = read(currentSocket, buffer, sizeof(buffer));
-        if (serverResponse > 0)
+        int serverResponse = read(currentSocket, buffer, sizeof(buffer));
+        if (serverResponse == -1)
         {
-            //char* res = getResponseResult(buffer);
-            
+            fprintf(stderr, "Connection has been closed.\n");
+            close(currentSocket);
+            exit(1);
+        }
+        else
+        {
             // Distinguish between a OK response from the server and an error
             if (buffer[0] == 'O' && buffer[1] == 'K') //OK
             {
+                printf("%s", removeProtocolText(buffer));
+                
                 if (buffer[3] == 'S')   //START
-                {
-                    printf("%s", removeProtocolText(buffer));
+                {  
+                    char selection = showSelection();
                     
-                    printf(HELP);
-                    char choice[2];
-                    scanf("%c", &choice);
-                    //fgets(choice, sizeof(choice), stdin);
-
-                    printf("%c", choice);
-
-                    switch(choice[0])
+                    switch (selection)
                     {
-                        case 'a': case 'A': 
-                        printf("Please insert the text to analyze:\n");
-                        //char text[MAX_LENGTH - 5] = "";
-                        //Reads the first 507 chars (considering max of 512)
-                        fgets(buffer, 507, stdin);
-                        printf("%s", buffer);
+                        case 'a':
+                        fprintf(stdout, "Please insert the text to analyze: ");
+                        fflush(stdout);
+                        char str[512];
+                        fgets(str, sizeof(str), stdin);
+                        fprintf(stdout, "%s", str);
                         break;
-                         case 'b': case 'B':
-                        //7b
-                        break;
-                         case 'c': case 'C':
-                        //7c
-                        break;
-                        case 'd': case 'D':
-                        write(currentSocket,"QUIT\n", 6);
+                    case 'b':
+                    break;
+                    case 'c':
+                    break;
+                    case 'd':
+                    write(currentSocket,"QUIT\n", 6);
+                    break;
+                    default:
+                    //error
                         break;
                     }
                 }
                 else if (buffer[3] == 'Q')  //QUIT
                 {
-                    printf("%s", removeProtocolText(buffer));
+                    fprintf(stdout ,"%s", removeProtocolText(buffer));
                     close(currentSocket);
                     break;
                 }
@@ -124,22 +123,18 @@ void main(int argc, char *argv[])
                 exit(1);
             }      
         }
-        else
-        {
-            fprintf(stderr, "Connection has been closed.\n");
-            close(currentSocket);
-            exit(1);
-        }
 
+        //Clears the buffer
         clearBuffer();
     }
 }
 
 char showSelection()
 {
-    printf(HELP);
+    fprintf(stdout, HELP);
     char choice = 0;
     scanf(" %c", &choice);
+    fflush(stdin);
 
     return choice;
 }
