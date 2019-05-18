@@ -87,10 +87,6 @@ void main(int argc, char *argv[])
 			close(currentSocket);
 			return;
 		}
-		else
-		{
-			printf("Waiting for a client to connect.");
-		}
 		
 
 		printf("Sending START message to the client.\n");

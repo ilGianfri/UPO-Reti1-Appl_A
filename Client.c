@@ -79,19 +79,25 @@ void main(int argc, char *argv[])
             // Distinguish between a OK response from the server and an error
             if (buffer[0] == 'O' && buffer[1] == 'K') //OK
             {
-                switch (buffer[3])
+                if (buffer[3] == 'S')   //START
                 {
-                    case 'S':   //START
                     printf("%s", removeProtocolText(buffer));
                     
-                    char selection = showSelection();
-                    switch(selection)
+                    printf(HELP);
+                    char choice[2];
+                    scanf("%c", &choice);
+                    //fgets(choice, sizeof(choice), stdin);
+
+                    printf("%c", choice);
+
+                    switch(choice[0])
                     {
-                        case 'a': case 'A':
-                        printf("Please insert the text to analyze: ");
+                        case 'a': case 'A': 
+                        printf("Please insert the text to analyze:\n");
                         //char text[MAX_LENGTH - 5] = "";
                         //Reads the first 507 chars (considering max of 512)
-                        //fgets(buffer, 507, stdin);
+                        fgets(buffer, 507, stdin);
+                        printf("%s", buffer);
                         break;
                          case 'b': case 'B':
                         //7b
@@ -103,8 +109,9 @@ void main(int argc, char *argv[])
                         write(currentSocket,"QUIT\n", 6);
                         break;
                     }
-                    break;
-                    case 'Q': //QUIT
+                }
+                else if (buffer[3] == 'Q')  //QUIT
+                {
                     printf("%s", removeProtocolText(buffer));
                     close(currentSocket);
                     break;
@@ -132,7 +139,7 @@ char showSelection()
 {
     printf(HELP);
     char choice = 0;
-    scanf("%c", &choice);
+    scanf(" %c", &choice);
 
     return choice;
 }
