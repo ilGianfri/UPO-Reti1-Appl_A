@@ -9,6 +9,7 @@ Buffer si deve ridimensionare?
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h> 
+#include <ctype.h>
 
 #define true 1
 #define false 0
@@ -31,6 +32,9 @@ char* responseBuilder(char result[], char type[], char content[]);
 char* getCommand(char fulls[]);
 int isAllowedCommand(char cmd[]);
 int responseLength(char result[], char type[], char content[]);
+void flushAll();
+int getCounter(char buff[]);
+int getCountLength(char buff[]);
 
 void main(int argc, char *argv[])
 {
@@ -55,7 +59,7 @@ void main(int argc, char *argv[])
 	else
 	{
 		//Socket created successfully, prints diagnostic message
-		printf("Socket created successfully.\n");
+		fprintf(stdout, "Socket created successfully.\n");
 	}
 	
 	//Initializes the socket with protocol, port, INADDR_ANY to use all local addresses
@@ -64,7 +68,7 @@ void main(int argc, char *argv[])
 	server.sin_addr.s_addr = htonl(INADDR_ANY);
 	int scktstatus = bind(currentSocket, (struct sockaddr *)&server, sizeof(server));
 	if (scktstatus == 0)
-		printf("Socket ready. Waiting for connection...\n");
+		fprintf(stdout, "Socket ready. Waiting for connection...\n");
 	else
 	{
 		fprintf(stderr, "Socket not ready. Cannot bind to address.\n");
@@ -78,6 +82,7 @@ void main(int argc, char *argv[])
 	//Now that the socket is ready, keeps waiting for an incoming connection
 	while(1)
 	{
+		scktstatus = 0;
 		struct sockaddr_in client = { 0 };
 		int sizeClient = sizeof(client);
         int incomingSocket = accept(currentSocket,(struct sockaddr *)&client, &sizeClient);
@@ -89,7 +94,7 @@ void main(int argc, char *argv[])
 		}
 		
 
-		printf("Sending START message to the client.\n");
+		fprintf(stdout, "Sending START message to the client.\n");
 		write(incomingSocket, responseBuilder(OKRES, "START", WELCOMEMSG), MAX_LENGTH);
 
 		//Keeps listening on the current socket
@@ -105,7 +110,21 @@ void main(int argc, char *argv[])
 					switch(cmd[0])
 					{
 						case 'T':	//TEXT
-
+						fprintf(stdout, "Received TEXT from the client. \n");
+						int count = getCounter(buffer);
+						int calculatedcount = (strlen(buffer) - 1) - 6 - getCountLength(buffer);
+						if (calculatedcount == count)
+						{
+							fprintf(stdout, "Received message is semantically correct. Replying to the client.\n");
+							char num[getCountLength(buffer)];
+							sprintf(num, "%d", calculatedcount);
+							write(incomingSocket, responseBuilder(OKRES, "TEXT", num), responseLength(OKRES, "TEXT", num));
+						}
+						else
+						{
+							//ERROR
+						}
+						
 						break;
 						case 'H':	//HIST
 
@@ -114,7 +133,7 @@ void main(int argc, char *argv[])
 
 						break;
 						case 'Q':	//QUIT
-						printf("Sending closing message to client.\n");
+						fprintf(stdout, "Sending closing message to client.\n");
 						write(incomingSocket, responseBuilder(OKRES, "QUIT", GOODBYEMSG), responseLength(OKRES, "QUIT", GOODBYEMSG));
 						close(incomingSocket);
 						scktstatus = -1;
@@ -123,7 +142,7 @@ void main(int argc, char *argv[])
 				}
 				else 
 				{
-					printf("Received an invalid command. Closing socket");
+					fprintf(stdout, "Received an invalid command. Closing socket");
 					write(incomingSocket, responseBuilder(ERRORMSG, "SYNTAX", "Command is not valid. Connection closed."), responseLength(ERRORMSG, "SYNTAX", "Command is not valid. Connection closed."));
 					close(incomingSocket);
 				}
@@ -136,6 +155,49 @@ void main(int argc, char *argv[])
 			}
 		}	
 	}
+}
+
+void flushAll()
+{
+    fflush(stdin);
+    fflush(stdout);
+}
+
+int getCountLength(char buff[])
+{
+	int length = 0;
+	//Gets the message length
+	int totmsglength = ((int)strlen(buff)) - 1;
+	//Message is correctly formated, gets the text length
+	if (buff[totmsglength] == '\n')
+	{
+
+		for (int i = totmsglength - 1; i > totmsglength - 3; i--)
+		{
+			if (isdigit(buff[i]))
+			length++;
+		}
+	}
+	return length;
+}
+
+// Gets the number at the end of the TEXT message
+int getCounter(char buff[])
+{
+	//Gets the message length
+	int totmsglength = ((int)strlen(buff)) - 1;
+	//Message is correctly formated, gets the text length
+	if (buff[totmsglength] == '\n')
+	{
+		int length = getCountLength(buff);
+							
+		char num[length];
+		memcpy(num, &buff[totmsglength - length], length);
+		fprintf(stdout, "%d\n", atoi(num));
+		return atoi(num);
+	}
+
+	return 0;
 }
 
 // Spero copy le prime 4 lettere in cmd

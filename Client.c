@@ -5,6 +5,7 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <ctype.h>
 
 
 const char WRONGARGS[] = "Missing parameter\n\nSYNTAX: $%s <server address> <port number>\n";
@@ -22,7 +23,11 @@ void clearBuffer();
 char* removeProtocolText(char b[]);
 char* getResponseResult(char fulls[]);
 char* getResponseType(char fulls[]);
+int getMessageLength(char result[], char type[], char content[]);
+char* textMessageBuilder(char command[], char type[], int content);
 char showSelection();
+int countAlnum(char txt[]);
+void flushAll();
 
 void main(int argc, char *argv[])
 {
@@ -69,6 +74,8 @@ void main(int argc, char *argv[])
     
     while(1)
     {
+        void flushAll();
+
         //Listens on the socket for messages
         int serverResponse = read(currentSocket, buffer, sizeof(buffer));
         if (serverResponse == -1)
@@ -81,37 +88,47 @@ void main(int argc, char *argv[])
         {
             // Distinguish between a OK response from the server and an error
             if (buffer[0] == 'O' && buffer[1] == 'K') //OK
-            {
-                printf("%s", removeProtocolText(buffer));
+            { 
+                printf("%s", removeProtocolText(buffer));             
                 
-                if (buffer[3] == 'S')   //START
+                if (buffer[3] == 'S' && buffer[4] == 'T')   //START
                 {  
                     char selection = showSelection();
+                    void flushAll();
                     
                     switch (selection)
                     {
-                        case 'a':
+                        case 'a': case 'A':
                         fprintf(stdout, "Please insert the text to analyze: ");
-                        fflush(stdout);
-                        char str[512];
+                        char str[507];
+                        bzero(str, sizeof(str));
+                        //workaround
                         fgets(str, sizeof(str), stdin);
-                        fprintf(stdout, "%s", str);
+                        fgets(str, sizeof(str), stdin);
+                        strtok(str, "\n");
+                        //fprintf(stdout, "%s", str);
+                        printf("%s", textMessageBuilder("TEXT", str, countAlnum(str)));
+
+                        write(currentSocket, textMessageBuilder("TEXT", str, countAlnum(str)), strlen(textMessageBuilder("TEXT", str, countAlnum(str))));
                         break;
-                    case 'b':
-                    break;
-                    case 'c':
-                    break;
-                    case 'd':
-                    write(currentSocket,"QUIT\n", 6);
-                    break;
-                    default:
-                    //error
+
+                        case 'b': case 'B':
+                        break;
+                        case 'c': case 'C':
+                        break;
+                        case 'd': case 'D':
+                        write(currentSocket,"QUIT\n", 6);
+                        break;
+                        default:
+                        fprintf(stderr, "%c s not a valid choice.\n", selection);
+                        close(currentSocket);
+                        exit(1);
                         break;
                     }
                 }
-                else if (buffer[3] == 'Q')  //QUIT
+                else if (buffer[3] == 'Q' && buffer[4] == 'U')  //QUIT
                 {
-                    fprintf(stdout ,"%s", removeProtocolText(buffer));
+                    //fprintf(stdout ,"%s", removeProtocolText(buffer));
                     close(currentSocket);
                     break;
                 }
@@ -126,7 +143,32 @@ void main(int argc, char *argv[])
 
         //Clears the buffer
         clearBuffer();
+        flushAll();
     }
+}
+
+int countAlnum(char txt[])
+{
+    int c = 0;
+    for (int i = 0; i < (int)strlen(txt); i++)
+    {
+        if (isalnum(txt[i]))
+            c++;
+    }
+    return c;
+}
+
+void flushAll()
+{
+    fflush(stdin);
+    fflush(stdout);
+}
+
+int getMessageLength(char result[], char type[], char content[])
+{
+	char toreturn[MAX_LENGTH];
+    sprintf(toreturn, PROTOCOLFORMAT, result, type, content);
+	return strlen(toreturn);
 }
 
 char showSelection()
@@ -139,11 +181,12 @@ char showSelection()
     return choice;
 }
 
-// This method builds the response messages to ensure they respect the protocol
-char* responseBuilder(char command[], char type[], char content[])
+// This method builds the the  messages to ensure they respect the protocol
+char* textMessageBuilder(char command[], char type[], int content)
 {
     char toreturn[MAX_LENGTH];
-    sprintf(toreturn, PROTOCOLFORMAT, command, type, content);
+    snprintf(toreturn, sizeof(toreturn), "%s %s %d\n", command, type, content);
+    //sprintf(toreturn, PROTOCOLFORMAT, command, type, content);
     char *ptr = toreturn;
 
     return ptr;
