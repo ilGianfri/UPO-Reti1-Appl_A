@@ -88,11 +88,11 @@ void main(int argc, char *argv[])
         {
             // Distinguish between a OK response from the server and an error
             if (buffer[0] == 'O' && buffer[1] == 'K') //OK
-            { 
-                printf("%s", removeProtocolText(buffer));             
-                
+            {                 
                 if (buffer[3] == 'S' && buffer[4] == 'T')   //START
                 {  
+                    printf("%s", removeProtocolText(buffer));             
+                    
                     char selection = showSelection();
                     void flushAll();
                     
@@ -100,14 +100,15 @@ void main(int argc, char *argv[])
                     {
                         case 'a': case 'A':
                         fprintf(stdout, "Please insert the text to analyze: ");
-                        char str[507];
+                        char str[504];
                         bzero(str, sizeof(str));
                         //workaround
                         fgets(str, sizeof(str), stdin);
                         fgets(str, sizeof(str), stdin);
                         strtok(str, "\n");
                         //fprintf(stdout, "%s", str);
-                        printf("%s", textMessageBuilder("TEXT", str, countAlnum(str)));
+                        //printf("%s", textMessageBuilder("TEXT", str, countAlnum(str)));
+
 
                         write(currentSocket, textMessageBuilder("TEXT", str, countAlnum(str)), strlen(textMessageBuilder("TEXT", str, countAlnum(str))));
                         break;
@@ -126,16 +127,21 @@ void main(int argc, char *argv[])
                         break;
                     }
                 }
+                else if (buffer[3] == 'T' && buffer[4] == 'E')  //OK TEXT
+                {
+
+                }
                 else if (buffer[3] == 'Q' && buffer[4] == 'U')  //QUIT
                 {
-                    //fprintf(stdout ,"%s", removeProtocolText(buffer));
+                    fprintf(stdout, "%s", removeProtocolText(buffer));
                     close(currentSocket);
                     break;
                 }
             }
             else    //ERROR
             {
-                fprintf(stderr, "Received an error from the server. Connection will be closed. Error %d.\n", serverResponse);
+                //TODO: HANDLE DIFF ERRORS
+                fprintf(stderr, "Connection has been closed by the server. Error %d.\n", serverResponse);
                 close(currentSocket);
                 exit(1);
             }      

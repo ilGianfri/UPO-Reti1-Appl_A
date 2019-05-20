@@ -35,6 +35,15 @@ int responseLength(char result[], char type[], char content[]);
 void flushAll();
 int getCounter(char buff[]);
 int getCountLength(char buff[]);
+int countAlnum(char txt[]);
+int isMessageCorrect(char buff[]);
+char* removeProtocolText(char b[]);
+
+struct Node  
+{ 
+  char data[504]; 
+  struct Node *next; 
+}; 
 
 void main(int argc, char *argv[])
 {
@@ -97,6 +106,10 @@ void main(int argc, char *argv[])
 		fprintf(stdout, "Sending START message to the client.\n");
 		write(incomingSocket, responseBuilder(OKRES, "START", WELCOMEMSG), MAX_LENGTH);
 
+		//Contains all the text received from the client via TEXT cmd
+		struct Node* cTextHead = NULL;
+		struct Node* currentNode = NULL;
+
 		//Keeps listening on the current socket
 		while(scktstatus != -1)
 		{
@@ -112,16 +125,41 @@ void main(int argc, char *argv[])
 						case 'T':	//TEXT
 						fprintf(stdout, "Received TEXT from the client. \n");
 						int count = getCounter(buffer);
-						int calculatedcount = (strlen(buffer) - 1) - 6 - getCountLength(buffer);
-						if (calculatedcount == count)
+						int calculatedcount = countAlnum(buffer) - 4 - getCountLength(buffer);
+						if (isMessageCorrect(buffer) && calculatedcount == count)
 						{
 							fprintf(stdout, "Received message is semantically correct. Replying to the client.\n");
 							char num[getCountLength(buffer)];
 							sprintf(num, "%d", calculatedcount);
+
+							// First message
+							if (cTextHead == NULL)
+							{
+								cTextHead = (struct Node*)malloc(sizeof(struct Node));
+								memcpy(cTextHead->data, removeProtocolText(buffer), strlen(removeProtocolText(buffer)));
+								currentNode = cTextHead->next;
+							}
+							else
+							{
+								currentNode = (struct Node*)malloc(sizeof(struct Node));
+								cTextHead->next = currentNode;
+								memcpy(cTextHead->data, removeProtocolText(buffer), strlen(removeProtocolText(buffer)));
+								currentNode = currentNode->next;
+							}
+							
+							// fprintf(stdout, "%s\n", cTextHead->data);
 							write(incomingSocket, responseBuilder(OKRES, "TEXT", num), responseLength(OKRES, "TEXT", num));
 						}
 						else
 						{
+							fprintf(stdout, "Received message is not semantically correct. Replying to the client & closing connection.\n");
+							if (calculatedcount != count)
+								write(incomingSocket, responseBuilder(ERRORMSG, "TEXT", "Text counter mismatch."), responseLength(ERRORMSG, "TEXT", "Text counter mismatch."));
+							else
+								write(incomingSocket, responseBuilder(ERRORMSG, "TEXT", "Received message is not semantically correct."), responseLength(ERRORMSG, "TEXT", "Received message is not semantically correct."));
+							
+							close(incomingSocket);
+							scktstatus = -1;
 							//ERROR
 						}
 						
@@ -157,12 +195,52 @@ void main(int argc, char *argv[])
 	}
 }
 
+// Clears the streams
 void flushAll()
 {
     fflush(stdin);
     fflush(stdout);
 }
 
+// Removes all the protocol text leaving only the text
+char* removeProtocolText(char b[])
+{
+    char toreturn[504];
+	bzero(toreturn, sizeof(toreturn));
+    char *ptr = toreturn;
+    memcpy(toreturn, &b[5], strlen(b) - 7 - getCountLength(b));
+    return ptr;
+}
+
+int isMessageCorrect(char buff[])
+{
+	int correct = 0;
+	int totmsglength = ((int)strlen(buff)) - 1;
+	//Message is correctly formated
+	if (buff[totmsglength] == '\n')
+		correct = true;
+
+	//Checks that there's a space after the command, all commands have a length of 4
+	if (buff[4] == ' ')
+		correct = true;
+	else correct = false;
+
+	return correct;
+}
+
+//Counts the alphanumeric characters in the text
+int countAlnum(char txt[])
+{
+    int c = 0;
+    for (int i = 0; i < (int)strlen(txt); i++)
+    {
+        if (isalnum(txt[i]))
+            c++;
+    }
+    return c;
+}
+
+// Gets the length of the number at the end of the TEXT message (e.g 100 = 3, 20 = 2, 5 = 1)
 int getCountLength(char buff[])
 {
 	int length = 0;
@@ -175,7 +253,7 @@ int getCountLength(char buff[])
 		for (int i = totmsglength - 1; i > totmsglength - 3; i--)
 		{
 			if (isdigit(buff[i]))
-			length++;
+				length++;
 		}
 	}
 	return length;
@@ -193,14 +271,14 @@ int getCounter(char buff[])
 							
 		char num[length];
 		memcpy(num, &buff[totmsglength - length], length);
-		fprintf(stdout, "%d\n", atoi(num));
+		//fprintf(stdout, "%d\n", atoi(num));
 		return atoi(num);
 	}
 
 	return 0;
 }
 
-// Spero copy le prime 4 lettere in cmd
+// Gets the command from the received text
 char* getCommand(char fulls[])
 {
 	char cmd[4];
