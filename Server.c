@@ -38,12 +38,17 @@ int getCountLength(char buff[]);
 int countAlnum(char txt[]);
 int isMessageCorrect(char buff[]);
 char* removeProtocolText(char b[]);
+void sendHistText();
 
 struct Node  
 { 
   char data[504]; 
   struct Node *next; 
 }; 
+
+//Contains all the text received from the client via TEXT cmd
+struct Node* cTextHead = NULL;
+struct Node* currentNode = NULL;
 
 void main(int argc, char *argv[])
 {
@@ -106,10 +111,6 @@ void main(int argc, char *argv[])
 		fprintf(stdout, "Sending START message to the client.\n");
 		write(incomingSocket, responseBuilder(OKRES, "START", WELCOMEMSG), MAX_LENGTH);
 
-		//Contains all the text received from the client via TEXT cmd
-		struct Node* cTextHead = NULL;
-		struct Node* currentNode = NULL;
-
 		//Keeps listening on the current socket
 		while(scktstatus != -1)
 		{
@@ -161,14 +162,26 @@ void main(int argc, char *argv[])
 							close(incomingSocket);
 							scktstatus = -1;
 							//ERROR
+						}						
+						break;
+						case 'H':	//HIST
+						if (cTextHead != NULL)
+						{
+							sendHistText();
+						}
+						else
+						{
+							write(incomingSocket, responseBuilder(ERRORMSG, "HIST", "No text has been given. Connection will be closed."), responseLength(OKRES, "HIST", "No text has been given. Connection will be closed."));
+							close(incomingSocket);
+							scktstatus = -1;
 						}
 						
 						break;
-						case 'H':	//HIST
-
-						break;
 						case 'E':	//EXIT
 
+						//TODO
+						close(incomingSocket);
+						scktstatus = -1;
 						break;
 						case 'Q':	//QUIT
 						fprintf(stdout, "Sending closing message to client.\n");
@@ -194,6 +207,16 @@ void main(int argc, char *argv[])
 		}	
 	}
 }
+
+// Computes and replies with the hist
+void sendHistText()
+{
+	// currentNode = cTextHead;
+
+	// int ptr = 0;
+	// while (currentNode->data[0] )
+}
+
 
 // Clears the streams
 void flushAll()
@@ -249,7 +272,6 @@ int getCountLength(char buff[])
 	//Message is correctly formated, gets the text length
 	if (buff[totmsglength] == '\n')
 	{
-
 		for (int i = totmsglength - 1; i > totmsglength - 3; i--)
 		{
 			if (isdigit(buff[i]))

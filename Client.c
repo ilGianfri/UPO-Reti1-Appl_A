@@ -25,9 +25,10 @@ char* getResponseResult(char fulls[]);
 char* getResponseType(char fulls[]);
 int getMessageLength(char result[], char type[], char content[]);
 char* textMessageBuilder(char command[], char type[], int content);
-char showSelection();
+void showSelection();
 int countAlnum(char txt[]);
 void flushAll();
+int indexOfLastAllowedSpace(char fulls[]);
 
 void main(int argc, char *argv[])
 {
@@ -92,44 +93,12 @@ void main(int argc, char *argv[])
                 if (buffer[3] == 'S' && buffer[4] == 'T')   //START
                 {  
                     printf("%s", removeProtocolText(buffer));             
-                    
-                    char selection = showSelection();
-                    void flushAll();
-                    
-                    switch (selection)
-                    {
-                        case 'a': case 'A':
-                        fprintf(stdout, "Please insert the text to analyze: ");
-                        char str[504];
-                        bzero(str, sizeof(str));
-                        //workaround
-                        fgets(str, sizeof(str), stdin);
-                        fgets(str, sizeof(str), stdin);
-                        strtok(str, "\n");
-                        //fprintf(stdout, "%s", str);
-                        //printf("%s", textMessageBuilder("TEXT", str, countAlnum(str)));
 
-
-                        write(currentSocket, textMessageBuilder("TEXT", str, countAlnum(str)), strlen(textMessageBuilder("TEXT", str, countAlnum(str))));
-                        break;
-
-                        case 'b': case 'B':
-                        break;
-                        case 'c': case 'C':
-                        break;
-                        case 'd': case 'D':
-                        write(currentSocket,"QUIT\n", 6);
-                        break;
-                        default:
-                        fprintf(stderr, "%c s not a valid choice.\n", selection);
-                        close(currentSocket);
-                        exit(1);
-                        break;
-                    }
+                    showSelection();
                 }
                 else if (buffer[3] == 'T' && buffer[4] == 'E')  //OK TEXT
                 {
-
+                    showSelection();
                 }
                 else if (buffer[3] == 'Q' && buffer[4] == 'U')  //QUIT
                 {
@@ -170,6 +139,23 @@ void flushAll()
     fflush(stdout);
 }
 
+int indexOfLastAllowedSpace(char fulls[])
+{
+    // If the string is too long
+    if (strlen(fulls) > 504)
+    {
+        int i = 504;
+        // Finds the position of the first whitespace where the string will be split
+        while (fulls[i] != ' ')
+            i--;
+
+        return i;
+    }
+    
+    return 0;
+}
+
+
 int getMessageLength(char result[], char type[], char content[])
 {
 	char toreturn[MAX_LENGTH];
@@ -177,14 +163,52 @@ int getMessageLength(char result[], char type[], char content[])
 	return strlen(toreturn);
 }
 
-char showSelection()
+void showSelection()
 {
     fprintf(stdout, HELP);
     char choice = 0;
     scanf(" %c", &choice);
     fflush(stdin);
 
-    return choice;
+    void flushAll();
+    
+    switch (choice)
+    {
+        case 'a': case 'A':
+        fprintf(stdout, "Please insert the text to analyze: ");
+        char str[504];
+        bzero(str, sizeof(str));
+        //workaround
+        fgets(str, sizeof(str), stdin);
+        fgets(str, sizeof(str), stdin);
+        strtok(str, "\n");
+        //fprintf(stdout, "%s", str);
+        //printf("%s", textMessageBuilder("TEXT", str, countAlnum(str)));
+
+        if (strlen(str) > 504)
+        {
+            int c = indexOfLastAllowedSpace(str);
+            //TODO
+        }
+        else
+            write(currentSocket, textMessageBuilder("TEXT", str, countAlnum(str)), strlen(textMessageBuilder("TEXT", str, countAlnum(str))));
+        break;
+
+        case 'b': case 'B':
+            write(currentSocket, "HIST\n", 5);
+        break;
+        case 'c': case 'C':
+            write(currentSocket, "HIST\n", 5);
+        break;
+        case 'd': case 'D':
+        write(currentSocket,"QUIT\n", 5);
+        break;
+        default:
+        fprintf(stderr, "%c s not a valid choice.\n", choice);
+        close(currentSocket);
+        exit(1);
+        break;
+    }
 }
 
 // This method builds the the  messages to ensure they respect the protocol
@@ -223,7 +247,6 @@ char* getResponseResult(char fulls[])
 void clearBuffer()
 {
     bzero(buffer, sizeof(buffer));
-    //memset(buffer, 0, sizeof(buffer));
 }
 
 // Removes all the protocol text leaving only the message
