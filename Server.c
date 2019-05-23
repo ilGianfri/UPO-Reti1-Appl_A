@@ -39,17 +39,11 @@ int countAlnum(char txt[]);
 int isMessageCorrect(char buff[]);
 char* removeProtocolText(char b[]);
 void sendHistText();
-
-struct Node  
-{ 
-  char data[504]; 
-  struct Node *next; 
-}; 
+int cmpfunc(const void *a, const void *b);
 
 //Contains all the text received from the client via TEXT cmd
-struct Node* cTextHead = NULL;
-struct Node* currentNode = NULL;
-
+char *rcvdstr = NULL;
+ 
 void main(int argc, char *argv[])
 {
 	//Checks that the parameters are correct, otherwise prints the help and exits
@@ -96,6 +90,7 @@ void main(int argc, char *argv[])
 	//Now that the socket is ready, keeps waiting for an incoming connection
 	while(1)
 	{
+		free(rcvdstr);
 		scktstatus = 0;
 		struct sockaddr_in client = { 0 };
 		int sizeClient = sizeof(client);
@@ -114,6 +109,7 @@ void main(int argc, char *argv[])
 		//Keeps listening on the current socket
 		while(scktstatus != -1)
 		{
+        	bzero(buffer, sizeof(buffer));
 			//Waits for a message from the client
 			scktstatus = read(incomingSocket, buffer, sizeof(buffer));
 			if (scktstatus > 0)
@@ -134,21 +130,17 @@ void main(int argc, char *argv[])
 							sprintf(num, "%d", calculatedcount);
 
 							// First message
-							if (cTextHead == NULL)
+							if (rcvdstr == NULL)
 							{
-								cTextHead = (struct Node*)malloc(sizeof(struct Node));
-								memcpy(cTextHead->data, removeProtocolText(buffer), strlen(removeProtocolText(buffer)));
-								currentNode = cTextHead->next;
+								rcvdstr = (char *)malloc(strlen(removeProtocolText(buffer)));
+								strcpy(rcvdstr, removeProtocolText(buffer));
 							}
 							else
 							{
-								currentNode = (struct Node*)malloc(sizeof(struct Node));
-								cTextHead->next = currentNode;
-								memcpy(cTextHead->data, removeProtocolText(buffer), strlen(removeProtocolText(buffer)));
-								currentNode = currentNode->next;
+								rcvdstr = (char *)realloc(rcvdstr, sizeof(rcvdstr) + strlen(removeProtocolText(buffer)));
+								strcat(rcvdstr, removeProtocolText(buffer));
 							}
 							
-							// fprintf(stdout, "%s\n", cTextHead->data);
 							write(incomingSocket, responseBuilder(OKRES, "TEXT", num), responseLength(OKRES, "TEXT", num));
 						}
 						else
@@ -165,7 +157,7 @@ void main(int argc, char *argv[])
 						}						
 						break;
 						case 'H':	//HIST
-						if (cTextHead != NULL)
+						if (rcvdstr != NULL)
 						{
 							sendHistText();
 						}
@@ -173,6 +165,7 @@ void main(int argc, char *argv[])
 						{
 							write(incomingSocket, responseBuilder(ERRORMSG, "HIST", "No text has been given. Connection will be closed."), responseLength(OKRES, "HIST", "No text has been given. Connection will be closed."));
 							close(incomingSocket);
+							free(rcvdstr);
 							scktstatus = -1;
 						}
 						
@@ -180,6 +173,7 @@ void main(int argc, char *argv[])
 						case 'E':	//EXIT
 
 						//TODO
+						free(rcvdstr);
 						close(incomingSocket);
 						scktstatus = -1;
 						break;
@@ -187,6 +181,7 @@ void main(int argc, char *argv[])
 						fprintf(stdout, "Sending closing message to client.\n");
 						write(incomingSocket, responseBuilder(OKRES, "QUIT", GOODBYEMSG), responseLength(OKRES, "QUIT", GOODBYEMSG));
 						close(incomingSocket);
+						free(rcvdstr);
 						scktstatus = -1;
 						break;
 					}
@@ -211,10 +206,54 @@ void main(int argc, char *argv[])
 // Computes and replies with the hist
 void sendHistText()
 {
-	// currentNode = cTextHead;
+	char *res = malloc((char *) sizeof(MAX_LENGTH));
+	bzero(res, sizeof(res));
+	res = "HIST ";
 
-	// int ptr = 0;
-	// while (currentNode->data[0] )
+	int s = strlen(res);
+
+	qsort(rcvdstr, (size_t) strlen(rcvdstr), (size_t) sizeof(char), cmpfunc);
+
+	//removes all the white spaces
+	int i = 0;
+	while (rcvdstr[i] == ' ')
+	    memmove(rcvdstr, rcvdstr+1, strlen(rcvdstr));
+
+	char prev = 0;
+	int count = 0;
+	for (int i = 0; i < strlen(rcvdstr); i++)
+	{
+		if (isalnum(rcvdstr[i]))
+		{
+			if (prev == 0)
+				prev = rcvdstr[i];
+			else
+			{
+				if (rcvdstr[i] == prev)
+					count++;
+				else
+				{
+					count++;
+					char *t = (char*)malloc(6);
+					sprintf(t, "%c:%d ", prev, count);
+					//strcat(res, t);
+					// strcpy()
+					// memcpy(res[strlen(res)], t, strlen(t));
+
+				//TODO: CONCAT STRINGS
+
+					free(t);
+					count = 0;
+					prev = rcvdstr[i];
+				}				
+			}		
+		}
+	}
+}
+
+int cmpfunc(const void *a, const void *b) 
+{
+  return *(char*)a - *(char*)b;
 }
 
 
