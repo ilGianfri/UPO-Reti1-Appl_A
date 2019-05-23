@@ -24,7 +24,7 @@ char PROTOCOLFORMAT[] = "%s %s %s\n";
 char OKRES[] = "OK";
 char ERRORMSG[] = "ERR";
 
-int currentSocket = 0, port = 0;
+int currentSocket = 0, port = 0, incomingSocket = 0;
 struct sockaddr_in server;
 char buffer[512] = "";
 
@@ -94,7 +94,7 @@ void main(int argc, char *argv[])
 		scktstatus = 0;
 		struct sockaddr_in client = { 0 };
 		int sizeClient = sizeof(client);
-        int incomingSocket = accept(currentSocket,(struct sockaddr *)&client, &sizeClient);
+        incomingSocket = accept(currentSocket,(struct sockaddr *)&client, &sizeClient);
 		if (incomingSocket == -1)
 		{
 			fprintf(stderr, "Cannot accept incoming connection(s).\n");
@@ -143,7 +143,7 @@ void main(int argc, char *argv[])
 							
 							write(incomingSocket, responseBuilder(OKRES, "TEXT", num), responseLength(OKRES, "TEXT", num));
 						}
-						else
+						else	//ERROR
 						{
 							fprintf(stdout, "Received message is not semantically correct. Replying to the client & closing connection.\n");
 							if (calculatedcount != count)
@@ -153,7 +153,6 @@ void main(int argc, char *argv[])
 							
 							close(incomingSocket);
 							scktstatus = -1;
-							//ERROR
 						}						
 						break;
 						case 'H':	//HIST
@@ -171,8 +170,8 @@ void main(int argc, char *argv[])
 						
 						break;
 						case 'E':	//EXIT
-
-						//TODO
+						sendHistText();
+						write(incomingSocket, responseBuilder(OKRES, "EXIT", GOODBYEMSG), responseLength(OKRES, "EXIT", GOODBYEMSG));
 						free(rcvdstr);
 						close(incomingSocket);
 						scktstatus = -1;
@@ -208,7 +207,8 @@ void sendHistText()
 {
 	char *res = malloc((char *) sizeof(MAX_LENGTH));
 	bzero(res, sizeof(res));
-	res = "HIST ";
+
+	strcpy(res, "HIST ");
 
 	int s = strlen(res);
 
@@ -234,20 +234,25 @@ void sendHistText()
 				else
 				{
 					count++;
-					char *t = (char*)malloc(6);
+					char t[6];
 					sprintf(t, "%c:%d ", prev, count);
-					//strcat(res, t);
+					strcat(res, t);
 					// strcpy()
 					// memcpy(res[strlen(res)], t, strlen(t));
 
 				//TODO: CONCAT STRINGS
-
-					free(t);
 					count = 0;
 					prev = rcvdstr[i];
 				}				
 			}		
 		}
+	}
+	res[strlen(res) - 1] = '\n';
+
+	if (strlen(res) <= 512)
+	{
+		write(incomingSocket, res, strlen(res));
+		write(incomingSocket, "HIST END\n", 9);
 	}
 }
 

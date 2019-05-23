@@ -9,7 +9,7 @@
 
 
 const char WRONGARGS[] = "Missing parameter\n\nSYNTAX: $%s <server address> <port number>\n";
-const char HELP[] = "\nThe available options for this client are:\na. Insert text\nb. Analyze text\nc. Exit program (with text analysis)\nd. Exit program (without text analysis)\n\nWhat would you like to do? ";
+const char HELP[] = "\nThis software lets you send one or more strings to a server that will calculate the frequency of each character and return it.\nThe available options for this client are:\na. Insert text\nb. Analyze text\nc. Exit program (with text analysis)\nd. Exit program (without text analysis)\n\nWhat would you like to do? ";
 const int MAX_LENGTH = 512;
 
 int currentSocket = 0, port = 0;
@@ -90,24 +90,28 @@ void main(int argc, char *argv[])
             // Distinguish between a OK response from the server and an error
             if (buffer[0] == 'O' && buffer[1] == 'K') //OK
             {                 
-                if (buffer[3] == 'S' && buffer[4] == 'T')   //START
+                if (buffer[3] == 'S' && buffer[4] == 'T' && buffer[5] == 'A' && buffer[6] == 'R' && buffer[7] == 'T')   //START
                 {  
                     printf("%s", removeProtocolText(buffer));             
 
                     showSelection();
                 }
-                else if (buffer[3] == 'T' && buffer[4] == 'E')  //OK TEXT
-                {
+                else if (buffer[3] == 'T' && buffer[4] == 'E' && buffer[5] == 'X' && buffer[6] == 'T')  //OK TEXT
                     showSelection();
+                else if (buffer[3] == 'Q' && buffer[4] == 'U' && buffer[5] == 'I' && buffer[6] == 'T')  //QUIT
+                {
+                    fprintf(stdout, "%s", removeProtocolText(buffer));
+                    close(currentSocket);
+                    break;
                 }
-                else if (buffer[3] == 'Q' && buffer[4] == 'U')  //QUIT
+                else if (buffer[3] == 'E' && buffer[4] == 'X' && buffer[5] == 'I' && buffer[6] == 'T')  //EXIT
                 {
                     fprintf(stdout, "%s", removeProtocolText(buffer));
                     close(currentSocket);
                     break;
                 }
             }
-            else    //ERROR
+            else if (buffer[0] == 'E' && buffer[1] == 'R' && buffer[2] == 'R')  //ERROR
             {
                 //TODO: HANDLE DIFF ERRORS
                 fprintf(stderr, "Connection has been closed by the server. Error %d.\n", serverResponse);
