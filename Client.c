@@ -90,31 +90,55 @@ void main(int argc, char *argv[])
             // Distinguish between a OK response from the server and an error
             if (buffer[0] == 'O' && buffer[1] == 'K') //OK
             {                 
-                if (buffer[3] == 'S' && buffer[4] == 'T' && buffer[5] == 'A' && buffer[6] == 'R' && buffer[7] == 'T')   //START
+                if (buffer[3] == 'S' && buffer[4] == 'T' && buffer[5] == 'A' && buffer[6] == 'R' && buffer[7] == 'T')   //OK START
                 {  
                     printf("%s", removeProtocolText(buffer));             
 
                     showSelection();
                 }
                 else if (buffer[3] == 'T' && buffer[4] == 'E' && buffer[5] == 'X' && buffer[6] == 'T')  //OK TEXT
+                {
+                    fprintf(stdout, "Server has received the message successfully.\n");
                     showSelection();
-                else if (buffer[3] == 'Q' && buffer[4] == 'U' && buffer[5] == 'I' && buffer[6] == 'T')  //QUIT
+                }
+                else if (buffer[3] == 'Q' && buffer[4] == 'U' && buffer[5] == 'I' && buffer[6] == 'T')  //OK QUIT
                 {
                     fprintf(stdout, "%s", removeProtocolText(buffer));
                     close(currentSocket);
                     break;
                 }
-                else if (buffer[3] == 'E' && buffer[4] == 'X' && buffer[5] == 'I' && buffer[6] == 'T')  //EXIT
+                else if (buffer[3] == 'E' && buffer[4] == 'X' && buffer[5] == 'I' && buffer[6] == 'T')  //OK EXIT
                 {
                     fprintf(stdout, "%s", removeProtocolText(buffer));
                     close(currentSocket);
                     break;
                 }
+                else if (buffer[3] == 'H' && buffer[4] == 'I' && buffer[5] == 'S' && buffer[6] == 'T')  //OK HIST
+                {
+                    if (buffer[8] == 'E' && buffer[9] == 'N' && buffer[10] == 'D')
+                        showSelection();
+                    else fprintf(stdout, "%s", removeProtocolText(buffer));   
+                }
+
             }
             else if (buffer[0] == 'E' && buffer[1] == 'R' && buffer[2] == 'R')  //ERROR
             {
-                //TODO: HANDLE DIFF ERRORS
-                fprintf(stderr, "Connection has been closed by the server. Error %d.\n", serverResponse);
+                //HIST ERROR
+                if (buffer[4] == 'H' && buffer[5] == 'I' && buffer[6] == 'S' && buffer[7] == 'T')
+                {
+                    fprintf(stderr, "Server reported an issue with the HIST request. Server message: %s\nError %d\n", removeProtocolText(buffer), serverResponse);          
+                }
+                else if (buffer[4] == 'T' && buffer[5] == 'E' && buffer[6] == 'X' && buffer[7] == 'T')  //ERR TEXT
+                {
+                    fprintf(stderr, "%s", removeProtocolText(buffer));
+                }
+                else
+                {
+                    fprintf(stderr, "%s", removeProtocolText(buffer));
+                }
+                
+                
+                //fprintf(stderr, "Connection has been closed by the server. Error %d.\n", serverResponse);
                 close(currentSocket);
                 exit(1);
             }      
@@ -126,6 +150,7 @@ void main(int argc, char *argv[])
     }
 }
 
+//Counts the alfanumeric char contained in the given string
 int countAlnum(char txt[])
 {
     int c = 0;
@@ -137,12 +162,14 @@ int countAlnum(char txt[])
     return c;
 }
 
+//Clears both streams (in/out)
 void flushAll()
 {
     fflush(stdin);
     fflush(stdout);
 }
 
+//Finds the last space at end where it's fine to split the message
 int indexOfLastAllowedSpace(char fulls[])
 {
     // If the string is too long
@@ -159,7 +186,7 @@ int indexOfLastAllowedSpace(char fulls[])
     return 0;
 }
 
-
+//Calculates the length of the composed string
 int getMessageLength(char result[], char type[], char content[])
 {
 	char toreturn[MAX_LENGTH];
@@ -167,6 +194,7 @@ int getMessageLength(char result[], char type[], char content[])
 	return strlen(toreturn);
 }
 
+//Shows the selection to the user and sends the message
 void showSelection()
 {
     fprintf(stdout, HELP);
@@ -186,9 +214,8 @@ void showSelection()
         fgets(str, sizeof(str), stdin);
         fgets(str, sizeof(str), stdin);
         strtok(str, "\n");
-        //fprintf(stdout, "%s", str);
-        //printf("%s", textMessageBuilder("TEXT", str, countAlnum(str)));
 
+        //If the text is too long finds where it's fine to split and splits it in more messages
         if (strlen(str) > 504)
         {
             int c = indexOfLastAllowedSpace(str);
@@ -197,7 +224,6 @@ void showSelection()
         else
             write(currentSocket, textMessageBuilder("TEXT", str, countAlnum(str)), strlen(textMessageBuilder("TEXT", str, countAlnum(str))));
         break;
-
         case 'b': case 'B':
             write(currentSocket, "HIST\n", 5);
         break;

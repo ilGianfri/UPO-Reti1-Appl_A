@@ -10,6 +10,7 @@ Buffer si deve ridimensionare?
 #include <string.h>
 #include <unistd.h> 
 #include <ctype.h>
+#include <math.h>
 
 #define true 1
 #define false 0
@@ -40,6 +41,7 @@ int isMessageCorrect(char buff[]);
 char* removeProtocolText(char b[]);
 void sendHistText();
 int cmpfunc(const void *a, const void *b);
+int indexOfLastAllowedSpace(char fulls[]);
 
 //Contains all the text received from the client via TEXT cmd
 char *rcvdstr = NULL;
@@ -157,9 +159,7 @@ void main(int argc, char *argv[])
 						break;
 						case 'H':	//HIST
 						if (rcvdstr != NULL)
-						{
 							sendHistText();
-						}
 						else
 						{
 							write(incomingSocket, responseBuilder(ERRORMSG, "HIST", "No text has been given. Connection will be closed."), responseLength(OKRES, "HIST", "No text has been given. Connection will be closed."));
@@ -167,14 +167,22 @@ void main(int argc, char *argv[])
 							free(rcvdstr);
 							scktstatus = -1;
 						}
-						
 						break;
 						case 'E':	//EXIT
-						sendHistText();
-						write(incomingSocket, responseBuilder(OKRES, "EXIT", GOODBYEMSG), responseLength(OKRES, "EXIT", GOODBYEMSG));
-						free(rcvdstr);
+
+						if (rcvdstr != NULL)
+						{
+							sendHistText();
+							write(incomingSocket, responseBuilder(OKRES, "EXIT", GOODBYEMSG), responseLength(OKRES, "EXIT", GOODBYEMSG));
+						}
+						else
+						{
+							write(incomingSocket, responseBuilder(ERRORMSG, "HIST", "No text has been given. Connection will be closed."), responseLength(OKRES, "HIST", "No text has been given. Connection will be closed."));
+						}
+
 						close(incomingSocket);
-						scktstatus = -1;
+						free(rcvdstr);
+						scktstatus = -1;	
 						break;
 						case 'Q':	//QUIT
 						fprintf(stdout, "Sending closing message to client.\n");
@@ -194,7 +202,7 @@ void main(int argc, char *argv[])
 			}
 			else
 			{
-				fprintf(stderr, "There was an error getting the message from the client. Connection will be terminated.\n");
+				fprintf(stderr, "There was an error getting the message from the client. Connection has been terminated.\n");
 				close(incomingSocket);
 				scktstatus = -1;
 			}
@@ -208,7 +216,7 @@ void sendHistText()
 	char *res = malloc((char *) sizeof(MAX_LENGTH));
 	bzero(res, sizeof(res));
 
-	strcpy(res, "HIST ");
+	strcpy(res, "OK HIST ");
 
 	int s = strlen(res);
 
@@ -236,11 +244,10 @@ void sendHistText()
 					count++;
 					char t[6];
 					sprintf(t, "%c:%d ", prev, count);
-					strcat(res, t);
-					// strcpy()
-					// memcpy(res[strlen(res)], t, strlen(t));
 
-				//TODO: CONCAT STRINGS
+					if (strlen(res) + 6 <= 512)
+						strcat(res, t);
+
 					count = 0;
 					prev = rcvdstr[i];
 				}				
@@ -249,11 +256,36 @@ void sendHistText()
 	}
 	res[strlen(res) - 1] = '\n';
 
-	if (strlen(res) <= 512)
+	if (strlen(res) <= 15)
 	{
 		write(incomingSocket, res, strlen(res));
-		write(incomingSocket, "HIST END\n", 9);
+		write(incomingSocket, "OK HIST END\n", 9);
 	}
+	else
+	{
+		//Message is too long and will be split	
+		int spltindx = indexOfLastAllowedSpace(res);
+		char substr[512];
+		bzero(substr, sizeof(substr));		
+		memcpy(substr, res, spltindx);
+		substr[strlen(substr)] = '\n';
+		write(incomingSocket, substr, strlen(substr));
+	
+		write(incomingSocket, "OK HIST END\n", 9);
+	}
+}
+
+//Finds the last space at end where it's fine to split the message
+int indexOfLastAllowedSpace(char fulls[])
+{
+	int i = 15;
+	// Finds the position of the first whitespace where the string will be split
+	while (fulls[i] != ' ')
+		i--;
+
+	return i;
+
+	return 0;
 }
 
 int cmpfunc(const void *a, const void *b) 
