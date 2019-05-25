@@ -25,7 +25,7 @@ char PROTOCOLFORMAT[] = "%s %s %s\n";
 char OKRES[] = "OK";
 char ERRORMSG[] = "ERR";
 
-int currentSocket = 0, port = 0, incomingSocket = 0;
+int currentSocket = 0, port = 0, incomingSocket;
 struct sockaddr_in server;
 char buffer[512] = "";
 
@@ -41,18 +41,17 @@ int isMessageCorrect(char buff[]);
 char* removeProtocolText(char b[]);
 void sendHistText();
 int cmpfunc(const void *a, const void *b);
-int indexOfLastAllowedSpace(char fulls[]);
 
 //Contains all the text received from the client via TEXT cmd
 char *rcvdstr = NULL;
  
-void main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
 	//Checks that the parameters are correct, otherwise prints the help and exits
 	if (argc <= 1)
 	{
 		fprintf(stderr, WRONGARGS);
-		return;
+		return 1;
 	}
 
 	//Saves the specified port
@@ -64,7 +63,7 @@ void main(int argc, char *argv[])
 	if (currentSocket == -1)
 	{
 		fprintf(stderr, "Could not create a socket. Please verify your network settings.\n");
-		return;
+		return 1;
 	}
 	else
 	{
@@ -82,7 +81,7 @@ void main(int argc, char *argv[])
 	else
 	{
 		fprintf(stderr, "Socket not ready. Cannot bind to address.\n");
-		return;
+		return 1;
 	}
 	
 	//Listens for incoming connections, maximum 5 queued
@@ -95,13 +94,13 @@ void main(int argc, char *argv[])
 		free(rcvdstr);
 		scktstatus = 0;
 		struct sockaddr_in client = { 0 };
-		int sizeClient = sizeof(client);
+		socklen_t sizeClient = (socklen_t) sizeof(client);
         incomingSocket = accept(currentSocket,(struct sockaddr *)&client, &sizeClient);
 		if (incomingSocket == -1)
 		{
 			fprintf(stderr, "Cannot accept incoming connection(s).\n");
 			close(currentSocket);
-			return;
+			return 1;
 		}
 		
 
@@ -159,7 +158,7 @@ void main(int argc, char *argv[])
 						break;
 						case 'H':	//HIST
 						if (rcvdstr != NULL)
-							sendHistText();
+							sendHistText(incomingSocket);
 						else
 						{
 							write(incomingSocket, responseBuilder(ERRORMSG, "HIST", "No text has been given. Connection will be closed."), responseLength(OKRES, "HIST", "No text has been given. Connection will be closed."));
@@ -208,17 +207,16 @@ void main(int argc, char *argv[])
 			}
 		}	
 	}
+
+	return 0;
 }
 
 // Computes and replies with the hist
-void sendHistText()
+void sendHistText(int socket)
 {
 	char *res = (char*)malloc(sizeof(MAX_LENGTH));
-	bzero(res, sizeof(res));
-
+	memset(res, '\0', strlen(res));
 	strcpy(res, "OK HIST ");
-
-	int s = strlen(res);
 
 	qsort(rcvdstr, (size_t) strlen(rcvdstr), (size_t) sizeof(char), cmpfunc);
 
@@ -245,8 +243,20 @@ void sendHistText()
 					char t[6];
 					sprintf(t, "%c:%d ", prev, count);
 
-					if (strlen(res) + 6 <= 512)
+					//504
+					if (strlen(res) <= 15)
 						strcat(res, t);
+					else
+					{
+						res[strlen(res)] = '\n';
+
+						write(socket, res, strlen(res));
+						
+						memset(res, '\0', strlen(res));
+						strcpy(res, "OK HIST ");
+						strcat(res, t);
+					}
+					
 
 					count = 0;
 					prev = rcvdstr[i];
@@ -254,45 +264,15 @@ void sendHistText()
 			}		
 		}
 	}
-	res[strlen(res) - 1] = '\n';
+	//res[strlen(res) - 1] = '\n';
 
-	if (strlen(res) <= 15)
-	{
-		write(incomingSocket, res, strlen(res));
-		write(incomingSocket, "OK HIST END\n", 12);
-	}
-	else //Message is too long and will be split
-	{
-		//Send the first HIST
-		int spltindx = indexOfLastAllowedSpace(res);
-		char substr[512];
-		bzero(substr, sizeof(substr));
-		memcpy(substr, res, spltindx);
-		substr[strlen(substr)] = '\n';
-		write(incomingSocket, substr, strlen(substr));
-
-
-
-		write(incomingSocket, "OK HIST END\n", 12);
-	}
+	write(socket, "OK HIST END\n", 12);
 }
 
-//Finds the last space at end where it's fine to split the message
-int indexOfLastAllowedSpace(char fulls[])
-{
-	int i = 15;
-	// Finds the position of the first whitespace where the string will be split
-	while (fulls[i] != ' ')
-		i--;
-
-	return i;
-
-	return 0;
-}
 
 int cmpfunc(const void *a, const void *b) 
 {
-  return *(char*)a - *(char*)b;
+	return *(char*)a - *(char*)b;
 }
 
 

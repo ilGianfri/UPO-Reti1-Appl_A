@@ -116,10 +116,12 @@ void main(int argc, char *argv[])
                 else if (buffer[3] == 'H' && buffer[4] == 'I' && buffer[5] == 'S' && buffer[6] == 'T')  //OK HIST
                 {
                     if (buffer[8] == 'E' && buffer[9] == 'N' && buffer[10] == 'D')
+                    {
+                        fprintf(stderr, "Server has analyzed and sent the result correctly.\n\n");          
                         showSelection();
+                    }
                     else fprintf(stdout, "%s", removeProtocolText(buffer));   
                 }
-
             }
             else if (buffer[0] == 'E' && buffer[1] == 'R' && buffer[2] == 'R')  //ERROR
             {
