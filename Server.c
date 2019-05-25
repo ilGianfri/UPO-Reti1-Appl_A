@@ -213,7 +213,7 @@ void main(int argc, char *argv[])
 // Computes and replies with the hist
 void sendHistText()
 {
-	char *res = malloc((char *) sizeof(MAX_LENGTH));
+	char *res = (char*)malloc(sizeof(MAX_LENGTH));
 	bzero(res, sizeof(res));
 
 	strcpy(res, "OK HIST ");
@@ -259,19 +259,21 @@ void sendHistText()
 	if (strlen(res) <= 15)
 	{
 		write(incomingSocket, res, strlen(res));
-		write(incomingSocket, "OK HIST END\n", 9);
+		write(incomingSocket, "OK HIST END\n", 12);
 	}
-	else
+	else //Message is too long and will be split
 	{
-		//Message is too long and will be split	
+		//Send the first HIST
 		int spltindx = indexOfLastAllowedSpace(res);
 		char substr[512];
-		bzero(substr, sizeof(substr));		
+		bzero(substr, sizeof(substr));
 		memcpy(substr, res, spltindx);
 		substr[strlen(substr)] = '\n';
 		write(incomingSocket, substr, strlen(substr));
-	
-		write(incomingSocket, "OK HIST END\n", 9);
+
+
+
+		write(incomingSocket, "OK HIST END\n", 12);
 	}
 }
 
