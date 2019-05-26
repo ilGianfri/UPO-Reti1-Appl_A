@@ -171,7 +171,7 @@ int main(int argc, char *argv[])
 
 						if (rcvdstr != NULL)
 						{
-							sendHistText();
+							sendHistText(incomingSocket);
 							write(incomingSocket, responseBuilder(OKRES, "EXIT", GOODBYEMSG), responseLength(OKRES, "EXIT", GOODBYEMSG));
 						}
 						else
@@ -243,8 +243,7 @@ void sendHistText(int socket)
 					char t[6];
 					sprintf(t, "%c:%d ", prev, count);
 
-					//504
-					if (strlen(res) <= 15)
+					if (strlen(res) <= 504)
 						strcat(res, t);
 					else
 					{
@@ -264,7 +263,6 @@ void sendHistText(int socket)
 			}		
 		}
 	}
-	//res[strlen(res) - 1] = '\n';
 
 	write(socket, "OK HIST END\n", 12);
 }

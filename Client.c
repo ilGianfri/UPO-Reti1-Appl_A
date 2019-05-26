@@ -6,7 +6,7 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <ctype.h>
-
+#include <math.h>
 
 const char WRONGARGS[] = "Missing parameter\n\nSYNTAX: $%s <server address> <port number>\n";
 const char HELP[] = "\nThis software lets you send one or more strings to a server that will calculate the frequency of each character and return it.\nThe available options for this client are:\na. Insert text\nb. Analyze text\nc. Exit program (with text analysis)\nd. Exit program (without text analysis)\n\nWhat would you like to do? ";
@@ -28,7 +28,7 @@ char* textMessageBuilder(char command[], char type[], int content);
 void showSelection();
 int countAlnum(char txt[]);
 void flushAll();
-int indexOfLastAllowedSpace(char fulls[]);
+// int splitAndSendText(char fulls[]);
 
 void main(int argc, char *argv[])
 {
@@ -164,7 +164,7 @@ int countAlnum(char txt[])
     return c;
 }
 
-//Clears both streams (in/out)
+//Clears both streams (in/out)c
 void flushAll()
 {
     fflush(stdin);
@@ -172,21 +172,35 @@ void flushAll()
 }
 
 //Finds the last space at end where it's fine to split the message
-int indexOfLastAllowedSpace(char fulls[])
-{
-    // If the string is too long
-    if (strlen(fulls) > 504)
-    {
-        int i = 504;
-        // Finds the position of the first whitespace where the string will be split
-        while (fulls[i] != ' ')
-            i--;
+// int splitAndSendText(char fulls[])
+// {
+//     int count = 0, lastsplt = 0;
 
-        return i;
-    }
-    
-    return 0;
-}
+//     char *tmp = (char*)malloc(502);
+// 	memset(tmp, '\0', strlen(tmp));
+
+//     //copy the first part
+//     int i = 502;
+//     lastsplt = 502;
+//     memcpy(tmp, fulls, i);
+//     //TODO:SEND
+
+//     free(tmp);
+//     *tmp = (char*)malloc(502);
+
+//     while (fulls[i] != '\0')
+//     {
+//         if (count == 502)
+//         {
+//             //char *tmp = (char*)malloc(502);
+// 			memset(tmp, '\0', strlen(tmp));
+//             memcpy(tmp, )
+//         }
+
+//         count++;
+//         i++;
+//     }
+// }
 
 //Calculates the length of the composed string
 int getMessageLength(char result[], char type[], char content[])
@@ -218,10 +232,18 @@ void showSelection()
         strtok(str, "\n");
 
         //If the text is too long finds where it's fine to split and splits it in more messages
-        if (strlen(str) > 504)
+        if (strlen(str) > 512)
         {
-            int c = indexOfLastAllowedSpace(str);
-            //TODO
+            char *tmp = (char*) malloc(502);
+            int i = 502;
+            while (str[i] != ' ')
+                i--;
+
+            memcpy(tmp, str, i + 1);
+            fprintf(stderr, "Text is too long, only the first part will be sent. You can add more once the first part is sent. String that has been sent: %s\n", tmp);
+            write(currentSocket, textMessageBuilder("TEXT", tmp, countAlnum(tmp)), strlen(textMessageBuilder("TEXT", tmp, countAlnum(tmp))));
+
+            free(tmp);
         }
         else
             write(currentSocket, textMessageBuilder("TEXT", str, countAlnum(str)), strlen(textMessageBuilder("TEXT", str, countAlnum(str))));
@@ -248,7 +270,6 @@ char* textMessageBuilder(char command[], char type[], int content)
 {
     char toreturn[MAX_LENGTH];
     snprintf(toreturn, sizeof(toreturn), "%s %s %d\n", command, type, content);
-    //sprintf(toreturn, PROTOCOLFORMAT, command, type, content);
     char *ptr = toreturn;
 
     return ptr;
