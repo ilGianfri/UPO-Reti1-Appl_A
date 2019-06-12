@@ -226,7 +226,7 @@ void sendHistText(int socket)
 	    memmove(rcvdstr, rcvdstr+1, strlen(rcvdstr));
 
 	char prev = 0;
-	int count = 0;
+	int count = 0, sent = 0;
 	for (int i = 0; i < strlen(rcvdstr); i++)
 	{
 		if (isalnum(rcvdstr[i]))
@@ -254,14 +254,28 @@ void sendHistText(int socket)
 						memset(res, '\0', strlen(res));
 						strcpy(res, "OK HIST ");
 						strcat(res, t);
+
+						sent = 1;
 					}
 					
-
 					count = 0;
 					prev = rcvdstr[i];
+					if (i == strlen(rcvdstr) - 1)
+					{
+						count++;
+						char t[6];
+						sprintf(t, "%c:%d ", prev, count);
+						strcat(res, t);
+					}
 				}				
 			}		
 		}
+	}
+
+	if (!sent)
+	{
+		res[strlen(res)] = '\n';
+		write(socket, res, strlen(res));
 	}
 
 	write(socket, "OK HIST END\n", 12);
