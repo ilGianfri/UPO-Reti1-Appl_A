@@ -12,7 +12,7 @@ const char WRONGARGS[] = "Missing parameter\n\nSYNTAX: $%s <server address> <por
 const char HELP[] = "\nThis software lets you send one or more strings to a server that will calculate the frequency of each character and return it.\nThe available options for this client are:\na. Insert text\nb. Analyze text\nc. Exit program (with text analysis)\nd. Exit program (without text analysis)\n\nWhat would you like to do? ";
 const int MAX_LENGTH = 512;
 
-int currentSocket = 0, port = 0;
+int currentSocket = 0, port = 0, exit_req = 0;
 struct sockaddr_in scktAddr;
 char buffer[512] = "";
 char PROTOCOLFORMAT[] = "%s %s %s\n";
@@ -76,6 +76,7 @@ void main(int argc, char *argv[])
     while(1)
     {
         void flushAll();
+        clearBuffer();
 
         //Listens on the socket for messages
         int serverResponse = read(currentSocket, buffer, sizeof(buffer));
@@ -138,9 +139,7 @@ void main(int argc, char *argv[])
                 {
                     fprintf(stderr, "%s", removeProtocolText(buffer));
                 }
-                
-                
-                //fprintf(stderr, "Connection has been closed by the server. Error %d.\n", serverResponse);
+
                 close(currentSocket);
                 exit(1);
             }      
@@ -171,37 +170,6 @@ void flushAll()
     fflush(stdout);
 }
 
-//Finds the last space at end where it's fine to split the message
-// int splitAndSendText(char fulls[])
-// {
-//     int count = 0, lastsplt = 0;
-
-//     char *tmp = (char*)malloc(502);
-// 	memset(tmp, '\0', strlen(tmp));
-
-//     //copy the first part
-//     int i = 502;
-//     lastsplt = 502;
-//     memcpy(tmp, fulls, i);
-//     //TODO:SEND
-
-//     free(tmp);
-//     *tmp = (char*)malloc(502);
-
-//     while (fulls[i] != '\0')
-//     {
-//         if (count == 502)
-//         {
-//             //char *tmp = (char*)malloc(502);
-// 			memset(tmp, '\0', strlen(tmp));
-//             memcpy(tmp, )
-//         }
-
-//         count++;
-//         i++;
-//     }
-// }
-
 //Calculates the length of the composed string
 int getMessageLength(char result[], char type[], char content[])
 {
@@ -231,19 +199,22 @@ void showSelection()
         fgets(str, sizeof(str), stdin);
         strtok(str, "\n");
 
-        //If the text is too long finds where it's fine to split and splits it in more messages
-        if (strlen(str) > 512)
+        //If the text is too long, splits it in 2 messages
+        if (strlen(str) > 502)
         {
-            char *tmp = (char*) malloc(502);
-            int i = 502;
-            while (str[i] != ' ')
-                i--;
-
-            memcpy(tmp, str, i + 1);
-            fprintf(stderr, "Text is too long, only the first part will be sent. You can add more once the first part is sent. String that has been sent: %s\n", tmp);
-            write(currentSocket, textMessageBuilder("TEXT", tmp, countAlnum(tmp)), strlen(textMessageBuilder("TEXT", tmp, countAlnum(tmp))));
-
-            free(tmp);
+            int len = strlen(str);
+            int len1 = len/2;
+            int len2 = len - len1; // Compensate for possible odd length
+            char *s1 = malloc(len1+1); // one for the null terminator
+            memcpy(s1, str, len1);
+            s1[len1] = '\0';
+            char *s2 = malloc(len2+1); // one for the null terminator
+            memcpy(s2, str+len1, len2);
+            s2[len2] = '\0';
+            write(currentSocket, textMessageBuilder("TEXT", s1, countAlnum(s1)), strlen(textMessageBuilder("TEXT", s1, countAlnum(s1))));
+            free(s1);
+            write(currentSocket, textMessageBuilder("TEXT", s2, countAlnum(s2)), strlen(textMessageBuilder("TEXT", s2, countAlnum(s2))));
+            free(s2);
         }
         else
             write(currentSocket, textMessageBuilder("TEXT", str, countAlnum(str)), strlen(textMessageBuilder("TEXT", str, countAlnum(str))));
@@ -252,7 +223,8 @@ void showSelection()
             write(currentSocket, "HIST\n", 5);
         break;
         case 'c': case 'C':
-            write(currentSocket, "HIST\n", 5);
+            exit_req = 1;
+            write(currentSocket, "EXIT\n", 5);
         break;
         case 'd': case 'D':
         write(currentSocket,"QUIT\n", 5);

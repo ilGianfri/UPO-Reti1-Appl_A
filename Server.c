@@ -92,6 +92,7 @@ int main(int argc, char *argv[])
 	while(1)
 	{
 		free(rcvdstr);
+		rcvdstr = NULL;
 		scktstatus = 0;
 		struct sockaddr_in client = { 0 };
 		socklen_t sizeClient = (socklen_t) sizeof(client);
@@ -134,7 +135,7 @@ int main(int argc, char *argv[])
 							if (rcvdstr == NULL)
 							{
 								rcvdstr = (char *)malloc(strlen(removeProtocolText(buffer)));
-								strcpy(rcvdstr, removeProtocolText(buffer));
+								strcpy(rcvdstr, removeProtocolText(buffer) + 1);
 							}
 							else
 							{
@@ -158,10 +159,14 @@ int main(int argc, char *argv[])
 						break;
 						case 'H':	//HIST
 						if (rcvdstr != NULL)
+						{
 							sendHistText(incomingSocket);
+							write(incomingSocket, "OK HIST END\n", 12);
+						}
 						else
 						{
 							write(incomingSocket, responseBuilder(ERRORMSG, "HIST", "No text has been given. Connection will be closed."), responseLength(OKRES, "HIST", "No text has been given. Connection will be closed."));
+							write(incomingSocket, "OK HIST END\n", 12);
 							close(incomingSocket);
 							free(rcvdstr);
 							scktstatus = -1;
@@ -277,8 +282,6 @@ void sendHistText(int socket)
 		res[strlen(res)] = '\n';
 		write(socket, res, strlen(res));
 	}
-
-	write(socket, "OK HIST END\n", 12);
 }
 
 
