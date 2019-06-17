@@ -19,7 +19,7 @@ const char WRONGARGS[] = "Missing parameter\n\nSYNTAX: $server <port number>\n";
 const int MAX_LENGTH = 512;
 const char ALLOWEDCMDS[4][4] = { "TEXT", "HIST", "EXIT", "QUIT"};
 
-char WELCOMEMSG[] = "Welcome, connection enstablished successfully.";
+char WELCOMEMSG[] = "Welcome to my amazing server, connection enstablished successfully.";
 char GOODBYEMSG[] = "It was fun while it lasted, goodbye!";
 char PROTOCOLFORMAT[] = "%s %s %s\n";
 char OKRES[] = "OK";

@@ -204,7 +204,7 @@ void showSelection()
         {
             int len = strlen(str);
             int len1 = len/2;
-            int len2 = len - len1; // Compensate for possible odd length
+            int len2 = len - len1;
             char *s1 = malloc(len1+1); // one for the null terminator
             memcpy(s1, str, len1);
             s1[len1] = '\0';
