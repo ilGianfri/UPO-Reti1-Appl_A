@@ -10,3 +10,5 @@ alnum), ovvero i caratteri alfabetici (classe alpha) e le cifre numeriche (class
 caratteri sono quelle definite dall’ANSI C Standard Library e incluse in ctype.h. Questo esclude
 spazi, punteggiature, caratteri di controllo, e caratteri accentati. Per semplicità e uniformità si
 suppone che il server operi secondo la locale di default “C” o “POSIX”.
+
+This version has a few issues that I didn't bother fixing.
