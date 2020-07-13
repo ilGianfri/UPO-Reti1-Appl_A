@@ -1,5 +1,9 @@
 # Laboratorio per il corso di Reti 1 (A.A. 2018/19) - Applicazione A
 
+[![CodeFactor](https://www.codefactor.io/repository/github/ilgianfri/upo-reti1-appl_a/badge)](https://www.codefactor.io/repository/github/ilgianfri/upo-reti1-appl_a)
+![Last commit](https://img.shields.io/github/last-commit/ilGianfri/upo-reti1-appl_a.svg?style=popout-square)
+![License](https://img.shields.io/github/license/ilGianfri/upo-reti1-appl_a.svg?style=popout-square) 
+
 ## The pdf inside the repository contains all the requirements (in italian). 
 
 Sviluppare in linguaggio C un’applicazione di rete, costituita da un programma server ed un
